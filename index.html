@@ -70,14 +70,16 @@
 
   /* 指板图 */
   .fretboard-overlay{
-    position:fixed;right:20px;top:20px;transform:translateY(-16px) scale(.96);
+    position:fixed;right:20px;top:20px;
+    --dx:0px;--dy:0px;
+    transform:translate(var(--dx),var(--dy)) scale(.92);
     opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
-    z-index:50;transform-origin:top right;
+    z-index:50;transform-origin:top right;touch-action:none;
   }
-  .fretboard-overlay.show{opacity:1;transform:translateY(0) scale(1)}
+  .fretboard-overlay.show{opacity:1;pointer-events:auto;transform:translate(var(--dx),var(--dy)) scale(1)}
   @media (max-width:560px){
-    .fretboard-overlay{transform:translateY(-16px) scale(.74)}
-    .fretboard-overlay.show{transform:translateY(0) scale(.74)}
+    .fretboard-overlay{transform:translate(var(--dx),var(--dy)) scale(.6)}
+    .fretboard-overlay.show{transform:translate(var(--dx),var(--dy)) scale(.6)}
   }
   .fb{
     background:linear-gradient(180deg,#3a2410,#2a1808);
@@ -139,10 +141,10 @@
 
   <div class="fretboard-overlay" id="fretOverlay">
     <div class="fb">
-      <div class="fb-title">第一把位指板位置（6弦低音E 在下 → 1弦高音E 在上）</div>
+      <div class="fb-title">指板位置</div>
       <div class="fb-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
       <div id="fbGrid"></div>
-      <div class="fb-frets"><span>1</span><span>2</span><span>3</span><span>4</span></div>
+      <div class="fb-frets"><span>1</span><span>2</span><span>3</span></div>
     </div>
   </div>
 
@@ -196,7 +198,7 @@
       const row=document.createElement('div');
       row.className='fb-row';
       row.style.setProperty('--th',strThick[s]+'px');
-      for(let f=0;f<=4;f++){
+      for(let f=0;f<=3;f++){
         const cell=document.createElement('div');
         cell.className='fb-cell'+(f===0?' open':'');
         cell.dataset.string=s;cell.dataset.fret=f;
@@ -299,6 +301,24 @@
     fretBtn.classList.toggle('on',fretVisible);
     fretBtn.textContent=fretVisible?'隐藏指板':'指板';
   });
+
+  // —— 指板拖动（手机/鼠标通用） ——
+  let dx=0, dy=0, dragging=false, sx=0, sy=0;
+  fretOverlay.addEventListener('pointerdown',e=>{
+    dragging=true; sx=e.clientX; sy=e.clientY;
+    fretOverlay.setPointerCapture(e.pointerId);
+    fretOverlay.style.transition='none';
+  });
+  fretOverlay.addEventListener('pointermove',e=>{
+    if(!dragging) return;
+    dx+=e.clientX-sx; dy+=e.clientY-sy;
+    sx=e.clientX; sy=e.clientY;
+    fretOverlay.style.setProperty('--dx',dx+'px');
+    fretOverlay.style.setProperty('--dy',dy+'px');
+  });
+  const endDrag=()=>{ dragging=false; fretOverlay.style.transition=''; };
+  fretOverlay.addEventListener('pointerup',endDrag);
+  fretOverlay.addEventListener('pointercancel',endDrag);
 
   interval.addEventListener('input',()=>{
     intervalVal.textContent=parseFloat(interval.value).toFixed(1)+'s';
