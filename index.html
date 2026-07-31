@@ -98,6 +98,8 @@
     background:linear-gradient(90deg,#8a8a90,#dadae0 50%,#76767c);border-radius:1px;
   }
   .fb-cell.open::after{width:5px;background:linear-gradient(90deg,#bfb090,#f0e6cc 50%,#bfb090)}
+  .fb-cell.extend{width:22px}
+  .fb-cell.extend::after{display:none}
   .fb-mark{
     width:20px;height:20px;border-radius:50%;
     background:radial-gradient(circle at 38% 30%,#ffd877,var(--accent) 60%,#c8821f);
@@ -204,6 +206,10 @@
         cell.dataset.string=s;cell.dataset.fret=f;
         row.appendChild(cell);
       }
+      // 三品后的延伸（仅琴弦，无品丝）
+      const ext=document.createElement('div');
+      ext.className='fb-cell extend';
+      row.appendChild(ext);
       fbGrid.appendChild(row);
     }
   }
