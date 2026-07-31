@@ -127,6 +127,7 @@
   <div class="extra">
     <button class="auto-btn on" id="soundBtn">🔇 静音</button>
     <button class="auto-btn" id="autoBtn">自动播放</button>
+    <button class="auto-btn" id="fretBtn">指板</button>
     <div class="speed">
       间隔
       <input type="range" id="interval" min="1" max="10" step="0.5" value="2">
@@ -223,6 +224,8 @@
     if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
     if(audioCtx.state==='suspended') audioCtx.resume();
   }
+  // 移动端音频解锁：AudioContext 必须在用户手势内激活，否则无声
+  ['touchstart','pointerdown','click'].forEach(ev=>document.addEventListener(ev,()=>ensureAudio(),{once:true}));
   // 拨弦音色：基音 + 几个泛音叠加，配合快速衰减的包络
   function playTone(freq){
     if(!soundOn) return;
@@ -289,6 +292,14 @@
   }
   autoBtn.addEventListener('click',()=>{ autoTimer?stopAuto():startAuto(); });
 
+  const fretBtn=document.getElementById('fretBtn');
+  fretBtn.addEventListener('click',()=>{
+    fretVisible=!fretVisible;
+    fretOverlay.classList.toggle('show',fretVisible);
+    fretBtn.classList.toggle('on',fretVisible);
+    fretBtn.textContent=fretVisible?'隐藏指板':'指板';
+  });
+
   interval.addEventListener('input',()=>{
     intervalVal.textContent=parseFloat(interval.value).toFixed(1)+'s';
   });
@@ -300,7 +311,7 @@
     else if(k==='ArrowDown'){ e.preventDefault(); interval.value=Math.max(1,parseFloat(interval.value)-0.5).toFixed(1); interval.dispatchEvent(new Event('input')); }
     else if(k===' '){ e.preventDefault(); autoTimer?stopAuto():startAuto(); }
     else if(k==='v'||k==='V'){ soundBtn.click(); }
-    else if(k==='p'||k==='P'){ fretVisible=!fretVisible; fretOverlay.classList.toggle('show',fretVisible); }
+    else if(k==='p'||k==='P'){ fretBtn.click(); }
   });
 
   buildFretboard();
