@@ -71,21 +71,24 @@
   /* 指板图 */
   .fretboard-overlay{
     position:fixed;right:20px;top:20px;
-    --dx:0px;--dy:0px;
-    transform:translate(var(--dx),var(--dy)) scale(.92);
+    --dx:0px;--dy:0px;--scale:1;
+    transform:translate(var(--dx),var(--dy)) scale(var(--scale));
     opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
     z-index:50;transform-origin:top right;touch-action:none;
   }
-  .fretboard-overlay.show{opacity:1;pointer-events:auto;transform:translate(var(--dx),var(--dy)) scale(1)}
+  .fretboard-overlay.show{opacity:1;pointer-events:auto}
   @media (max-width:560px){
-    .fretboard-overlay{transform:translate(var(--dx),var(--dy)) scale(.6)}
-    .fretboard-overlay.show{transform:translate(var(--dx),var(--dy)) scale(.6)}
+    .fretboard-overlay{--scale:.6}
   }
-  .fb{
+  .fb{position:relative;
     background:linear-gradient(180deg,#3a2410,#2a1808);
     border-radius:10px;padding:12px 10px 10px;
     box-shadow:0 12px 36px rgba(0,0,0,.6), inset 0 1px 2px rgba(255,220,170,.1);
   }
+  .fb-resize{position:absolute;right:4px;bottom:4px;width:16px;height:16px;cursor:nwse-resize;
+    display:flex;flex-wrap:wrap;align-content:flex-end;justify-content:flex-end;gap:1.5px;touch-action:none;
+    z-index:10;}
+  .fb-resize i{width:3px;height:3px;border-radius:50%;background:var(--dim);opacity:.7}
   .fb-row{position:relative;display:flex;height:30px;align-items:stretch}
   .fb-row::before{
     content:"";position:absolute;left:0;right:0;top:50%;height:var(--th,2px);transform:translateY(-50%);
@@ -151,6 +154,7 @@
       <div class="fb-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
       <div id="fbGrid"></div>
       <div class="fb-frets"><span>1</span><span>2</span><span>3</span></div>
+      <div class="fb-resize" id="fbResize"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
   </div>
 
@@ -340,6 +344,27 @@
   const endDrag=()=>{ dragging=false; fretOverlay.style.transition=''; };
   fretOverlay.addEventListener('pointerup',endDrag);
   fretOverlay.addEventListener('pointercancel',endDrag);
+
+  // —— 指板缩放（右下角手柄拖动） ——
+  const fbResize=document.getElementById('fbResize');
+  let curScale = window.matchMedia('(max-width:560px)').matches ? 0.6 : 1;
+  let resizing=false, rsx=0, rsy=0, rsStart=1;
+  fbResize.addEventListener('pointerdown',e=>{
+    e.stopPropagation();
+    resizing=true; rsx=e.clientX; rsy=e.clientY; rsStart=curScale;
+    fbResize.setPointerCapture(e.pointerId);
+    fretOverlay.style.transition='none';
+  });
+  fbResize.addEventListener('pointermove',e=>{
+    if(!resizing) return;
+    // 往左上拖缩小，往右下拖放大；以横向位移为主
+    const delta=(e.clientX-rsx + e.clientY-rsy)/2;
+    curScale=Math.min(2.2, Math.max(0.4, rsStart + delta/200));
+    fretOverlay.style.setProperty('--scale', curScale.toFixed(3));
+  });
+  const endResize=()=>{ resizing=false; fretOverlay.style.transition=''; };
+  fbResize.addEventListener('pointerup',endResize);
+  fbResize.addEventListener('pointercancel',endResize);
 
   interval.addEventListener('input',()=>{
     intervalVal.textContent=parseFloat(interval.value).toFixed(1)+'s';
