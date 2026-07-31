@@ -70,11 +70,15 @@
 
   /* 指板图 */
   .fretboard-overlay{
-    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    position:fixed;right:20px;top:20px;transform:translateY(-16px) scale(.96);
     opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
-    z-index:50;
+    z-index:50;transform-origin:top right;
   }
-  .fretboard-overlay.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .fretboard-overlay.show{opacity:1;transform:translateY(0) scale(1)}
+  @media (max-width:560px){
+    .fretboard-overlay{transform:translateY(-16px) scale(.74)}
+    .fretboard-overlay.show{transform:translateY(0) scale(.74)}
+  }
   .fb{
     background:linear-gradient(180deg,#3a2410,#2a1808);
     border-radius:10px;padding:12px 10px 10px;
@@ -137,7 +141,7 @@
       <div class="fb-title">第一把位指板位置（6弦低音E 在下 → 1弦高音E 在上）</div>
       <div class="fb-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
       <div id="fbGrid"></div>
-      <div class="fb-frets"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+      <div class="fb-frets"><span>1</span><span>2</span><span>3</span><span>4</span></div>
     </div>
   </div>
 
@@ -147,9 +151,9 @@
   // freq: 实际音高频率(Hz)，用于发声
   // pos: 指板位置 [弦号(1高音E~6低音E), 品位(0=空弦)]
   const scale = [
-    {num:'3', oct:'low',  solf:'Mi',  name:'E', freq:164.81, pos:[6,2]},   // E3 低音Mi
-    {num:'4', oct:'low',  solf:'Fa',  name:'F', freq:174.61, pos:[6,3]},   // F3 低音Fa
-    {num:'5', oct:'low',  solf:'Sol', name:'G', freq:196.00, pos:[6,4]},   // G3 低音Sol
+    {num:'3', oct:'low',  solf:'Mi',  name:'E', freq:164.81, pos:[6,0]},   // E3 低音Mi（6弦空弦）
+    {num:'4', oct:'low',  solf:'Fa',  name:'F', freq:174.61, pos:[6,1]},   // F3 低音Fa（6弦1品）
+    {num:'5', oct:'low',  solf:'Sol', name:'G', freq:196.00, pos:[6,3]},   // G3 低音Sol（6弦3品）
     {num:'6', oct:'low',  solf:'La',  name:'A', freq:220.00, pos:[5,0]},   // A3 低音La
     {num:'7', oct:'low',  solf:'Si',  name:'B', freq:246.94, pos:[5,2]},   // B3 低音Si
     {num:'1', oct:'mid',  solf:'Do',  name:'C', freq:261.63, pos:[5,3]},   // C4 中音Do
