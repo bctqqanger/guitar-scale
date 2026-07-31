@@ -133,7 +133,7 @@
   <button class="next-btn" id="nextBtn">下一个 →</button>
 
   <div class="extra">
-    <button class="auto-btn on" id="soundBtn">🔇 静音</button>
+    <button class="auto-btn" id="soundBtn">🔊 发声</button>
     <button class="auto-btn" id="autoBtn">自动播放</button>
     <button class="auto-btn" id="fretBtn">指板</button>
     <div class="speed">
@@ -193,7 +193,7 @@
   const fbGrid=document.getElementById('fbGrid');
 
   let last=null, autoTimer=null;
-  let soundOn=true;
+  let soundOn=false;
   let fretVisible=false;
 
   // —— 构建指板图 ——
