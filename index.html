@@ -255,17 +255,19 @@
     ensureAudio();
     const ctx=audioCtx, now=ctx.currentTime, dur=1.8;
     const master=ctx.createGain();
-    master.connect(ctx.destination);
+    // 低通滤波：滤掉手机扬声器上的刺耳高频
+    const lp=ctx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=Math.min(4200, freq*5); lp.Q.value=0.7;
+    master.connect(lp); lp.connect(ctx.destination);
     master.gain.setValueAtTime(0, now);
-    master.gain.linearRampToValueAtTime(0.32, now+0.008); // 快速起音
+    master.gain.linearRampToValueAtTime(0.18, now+0.018); // 稍缓起音，减少尖锐瞬态
     master.gain.exponentialRampToValueAtTime(0.001, now+dur); // 自然衰减
 
-    // 泛音层（模拟弦的音色）
+    // 泛音层（模拟弦的音色，削弱高频避免刺耳）
     const harmonics=[
       {f:1.0, g:1.0,  type:'triangle'},
-      {f:2.0, g:0.45, type:'sine'},
-      {f:3.0, g:0.22, type:'sine'},
-      {f:4.0, g:0.12, type:'sine'},
+      {f:2.0, g:0.35, type:'sine'},
+      {f:3.0, g:0.12, type:'sine'},
     ];
     harmonics.forEach(h=>{
       const osc=ctx.createOscillator();
