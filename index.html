@@ -240,52 +240,43 @@
   let audioCtx=null, audioReady=false;
   function ensureAudio(){
     if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
-    if(audioCtx.state==='suspended'){ audioCtx.resume().then(()=>{audioReady=true;}); }
-    else { audioReady=true; }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    audioReady=true;
   }
   // 移动端音频解锁：AudioContext 必须在用户手势内激活，否则无声
   let pendingItem=null;
   function unlockOnce(){ ensureAudio(); if(pendingItem){ playTone(pendingItem.freq); pendingItem=null; } }
   ['touchstart','pointerdown','click'].forEach(ev=>document.addEventListener(ev,unlockOnce,{once:true}));
-  // 电吉他清音音色：锯齿波基音 + 泛音 + 轻微颤音 + 缓慢衰减
+  // 拨弦音色：基音 + 几个泛音叠加，配合快速衰减的包络
   function playTone(freq){
     if(!soundOn) return;
     // 未解锁（移动端首次自动播放）暂存，等用户首次触摸后补播
     if(!audioReady){ pendingItem={freq}; return; }
     ensureAudio();
-    const ctx=audioCtx, now=ctx.currentTime, dur=2.2;
+    const ctx=audioCtx, now=ctx.currentTime, dur=1.8;
     const master=ctx.createGain();
-    // 低通滤波：保留电吉他清音的明亮度，但不刺耳
+    // 低通滤波：滤掉手机扬声器上的刺耳高频
     const lp=ctx.createBiquadFilter();
-    lp.type='lowpass'; lp.frequency.value=Math.min(5000, freq*6); lp.Q.value=0.6;
+    lp.type='lowpass'; lp.frequency.value=Math.min(4200, freq*5); lp.Q.value=0.7;
     master.connect(lp); lp.connect(ctx.destination);
     master.gain.setValueAtTime(0, now);
-    master.gain.linearRampToValueAtTime(0.22, now+0.006); // 快速起音，模拟拨弦
-    master.gain.exponentialRampToValueAtTime(0.12, now+0.3); // 中段维持（电吉他延音长）
-    master.gain.exponentialRampToValueAtTime(0.001, now+dur); // 缓慢衰减
+    master.gain.linearRampToValueAtTime(0.18, now+0.018); // 稍缓起音，减少尖锐瞬态
+    master.gain.exponentialRampToValueAtTime(0.001, now+dur); // 自然衰减
 
-    // 颤音 LFO：轻微调制频率，模拟电吉他清音的 vibrato/chorus 感
-    const lfo=ctx.createOscillator();
-    lfo.type='sine'; lfo.frequency.value=5;
-    const lfoGain=ctx.createGain(); lfoGain.gain.value=freq*0.004;
-    lfo.connect(lfoGain);
-
-    // 泛音层（锯齿波基音 + 偶次泛音，电吉他味）
+    // 泛音层（模拟弦的音色，削弱高频避免刺耳）
     const harmonics=[
-      {f:1.0, g:1.0,  type:'sawtooth'},
-      {f:2.0, g:0.25, type:'sine'},
-      {f:3.0, g:0.08, type:'sine'},
+      {f:1.0, g:1.0,  type:'triangle'},
+      {f:2.0, g:0.35, type:'sine'},
+      {f:3.0, g:0.12, type:'sine'},
     ];
     harmonics.forEach(h=>{
       const osc=ctx.createOscillator();
       osc.type=h.type;
       osc.frequency.value=freq*h.f;
-      lfoGain.connect(osc.frequency); // 颤音调制
       const g=ctx.createGain(); g.gain.value=h.g;
       osc.connect(g); g.connect(master);
       osc.start(now); osc.stop(now+dur);
     });
-    lfo.start(now); lfo.stop(now+dur);
   }
 
   function pick(){
