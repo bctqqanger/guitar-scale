@@ -125,7 +125,7 @@
   <button class="next-btn" id="nextBtn">下一个 →</button>
 
   <div class="extra">
-    <button class="auto-btn on" id="soundBtn">🔊 发声</button>
+    <button class="auto-btn on" id="soundBtn">🔇 静音</button>
     <button class="auto-btn" id="autoBtn">自动播放</button>
     <div class="speed">
       间隔
@@ -270,7 +270,7 @@
 
   soundBtn.addEventListener('click',()=>{
     soundOn=!soundOn;
-    soundBtn.textContent = soundOn?'🔊 发声':'🔇 静音';
+    soundBtn.textContent = soundOn?'🔇 静音':'🔊 发声';
     soundBtn.classList.toggle('on',soundOn);
     if(soundOn) ensureAudio();
   });
