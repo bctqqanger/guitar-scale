@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 大调第一把位 · 随机简谱</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#15110d;
+    --ink:#f6ecdd;
+    --dim:#a8937c;
+    --accent:#f4b942;
+  }
+  body{
+    font-family:'Noto Sans SC',sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1000px 500px at 50% 30%, rgba(244,185,66,.12), transparent 60%),
+      linear-gradient(180deg,#241711,var(--bg) 60%);
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:24px;
+  }
+
+  .note{
+    width:min(72vmin,360px);height:min(72vmin,360px);border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 38% 30%, #ffd877, var(--accent) 58%, #c8821f);
+    color:#2a1809;
+    box-shadow:0 20px 60px rgba(244,185,66,.3), inset 0 4px 10px rgba(255,255,255,.45), inset 0 -10px 26px rgba(0,0,0,.22);
+    user-select:none;cursor:pointer;
+  }
+  .num-wrap{position:relative;display:flex;align-items:center;justify-content:center;line-height:.85}
+  .note .num{
+    font-family:'Fraunces',serif;font-weight:900;
+    font-size:min(42vmin,210px);line-height:.85;
+  }
+  .oct-dot{
+    position:absolute;left:50%;transform:translateX(-50%);
+    width:min(4vmin,16px);height:min(4vmin,16px);border-radius:50%;
+    background:#2a1809;
+  }
+  .oct-dot.top{top:calc(-1 * min(4.5vmin,18px))}
+  .oct-dot.bot{bottom:calc(-1 * min(4.5vmin,18px))}
+  .note .solf{font-size:min(4.5vmin,20px);font-weight:700;letter-spacing:.1em;margin-top:32px;opacity:.8}
+  .note.flash{animation:flash .35s ease}
+  @keyframes flash{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .next-btn{
+    font-family:inherit;font-weight:700;font-size:15px;color:#2a1809;cursor:pointer;
+    background:linear-gradient(180deg,#ffd06a,#e89225);border:0;padding:13px 34px;border-radius:999px;
+    box-shadow:0 8px 20px rgba(244,185,66,.28);transition:.18s;margin-top:40px;
+  }
+  .next-btn:hover{transform:translateY(-2px);box-shadow:0 11px 26px rgba(244,185,66,.4)}
+
+  .extra{display:flex;align-items:center;gap:14px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+  .auto-btn{
+    font-family:inherit;font-weight:600;font-size:13px;color:var(--ink);cursor:pointer;
+    background:rgba(255,255,255,.06);border:1px solid rgba(244,185,66,.28);padding:9px 16px;border-radius:999px;transition:.18s;
+  }
+  .auto-btn:hover{background:rgba(244,185,66,.1)}
+  .auto-btn.on{color:var(--accent);border-color:rgba(244,185,66,.5)}
+  .speed{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:12.5px}
+  .speed input{accent-color:var(--accent);cursor:pointer;width:90px}
+
+  .hint{color:var(--dim);font-size:12px;text-align:center;margin-top:18px;opacity:.7}
+  .hint b{color:var(--ink)}
+</style>
+</head>
+<body>
+  <div class="note" id="note" title="点击或按空格换下一个">
+    <div class="num-wrap" id="numWrap">
+      <span class="oct-dot top" id="dotTop" style="display:none"></span>
+      <div class="num" id="num">1</div>
+      <span class="oct-dot bot" id="dotBot" style="display:none"></span>
+    </div>
+    <div class="solf" id="solf">Do</div>
+  </div>
+
+  <button class="next-btn" id="nextBtn">下一个 →</button>
+
+  <div class="extra">
+    <button class="auto-btn on" id="soundBtn">🔊 发声</button>
+    <button class="auto-btn" id="autoBtn">自动播放</button>
+    <div class="speed">
+      间隔
+      <input type="range" id="interval" min="1" max="10" step="0.5" value="2">
+      <span id="intervalVal">2.0s</span>
+    </div>
+  </div>
+
+  <p class="hint"><b>Enter</b> 下一个音　<b>空格</b> 自动播放/停止　<b>↑↓</b> 调间隔　<b>V</b> 开关声音</p>
+
+<script>
+  // C 大调第一把位（0~4品）全部音，按音高从低到高
+  // oct: low=低音(下点) mid=中音(无点) high=高音(上点)
+  // freq: 实际音高频率(Hz)，用于发声
+  const scale = [
+    {num:'3', oct:'low',  solf:'Mi',  name:'E', freq:164.81},   // E3 低音Mi
+    {num:'4', oct:'low',  solf:'Fa',  name:'F', freq:174.61},   // F3 低音Fa
+    {num:'5', oct:'low',  solf:'Sol', name:'G', freq:196.00},   // G3 低音Sol
+    {num:'6', oct:'low',  solf:'La',  name:'A', freq:220.00},   // A3 低音La
+    {num:'7', oct:'low',  solf:'Si',  name:'B', freq:246.94},   // B3 低音Si
+    {num:'1', oct:'mid',  solf:'Do',  name:'C', freq:261.63},   // C4 中音Do
+    {num:'2', oct:'mid',  solf:'Re',  name:'D', freq:293.66},   // D4 中音Re
+    {num:'3', oct:'mid',  solf:'Mi',  name:'E', freq:329.63},   // E4 中音Mi
+    {num:'4', oct:'mid',  solf:'Fa',  name:'F', freq:349.23},   // F4 中音Fa
+    {num:'5', oct:'mid',  solf:'Sol', name:'G', freq:392.00},   // G4 中音Sol
+    {num:'6', oct:'mid',  solf:'La',  name:'A', freq:440.00},   // A4 中音La
+    {num:'7', oct:'mid',  solf:'Si',  name:'B', freq:493.88},   // B4 中音Si
+    {num:'1', oct:'high', solf:'Do',  name:'C', freq:523.25},   // C5 高音Do
+    {num:'2', oct:'high', solf:'Re',  name:'D', freq:587.33},   // D5 高音Re
+    {num:'3', oct:'high', solf:'Mi',  name:'E', freq:659.25},   // E5 高音Mi
+    {num:'4', oct:'high', solf:'Fa',  name:'F', freq:698.46},   // F5 高音Fa
+    {num:'5', oct:'high', solf:'Sol', name:'G', freq:783.99},   // G5 高音Sol
+  ];
+
+  const numEl=document.getElementById('num');
+  const solfEl=document.getElementById('solf');
+  const noteEl=document.getElementById('note');
+  const dotTop=document.getElementById('dotTop');
+  const dotBot=document.getElementById('dotBot');
+  const nextBtn=document.getElementById('nextBtn');
+  const autoBtn=document.getElementById('autoBtn');
+  const soundBtn=document.getElementById('soundBtn');
+  const interval=document.getElementById('interval');
+  const intervalVal=document.getElementById('intervalVal');
+
+  let last=null, autoTimer=null;
+  let soundOn=true;
+
+  // —— Web Audio：用合成音色模拟吉他拨弦 ——
+  let audioCtx=null;
+  function ensureAudio(){
+    if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+  }
+  // 拨弦音色：基音 + 几个泛音叠加，配合快速衰减的包络
+  function playTone(freq){
+    if(!soundOn) return;
+    ensureAudio();
+    const ctx=audioCtx, now=ctx.currentTime, dur=1.8;
+    const master=ctx.createGain();
+    master.connect(ctx.destination);
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(0.32, now+0.008); // 快速起音
+    master.gain.exponentialRampToValueAtTime(0.001, now+dur); // 自然衰减
+
+    // 泛音层（模拟弦的音色）
+    const harmonics=[
+      {f:1.0, g:1.0,  type:'triangle'},
+      {f:2.0, g:0.45, type:'sine'},
+      {f:3.0, g:0.22, type:'sine'},
+      {f:4.0, g:0.12, type:'sine'},
+    ];
+    harmonics.forEach(h=>{
+      const osc=ctx.createOscillator();
+      osc.type=h.type;
+      osc.frequency.value=freq*h.f;
+      const g=ctx.createGain(); g.gain.value=h.g;
+      osc.connect(g); g.connect(master);
+      osc.start(now); osc.stop(now+dur);
+    });
+  }
+
+  function pick(){
+    let x;
+    do{ x=Math.floor(Math.random()*scale.length); }while(scale.length>1 && x===last);
+    last=x;
+    const item=scale[x];
+    numEl.textContent=item.num;
+    solfEl.textContent=item.solf;
+    dotTop.style.display = item.oct==='high'?'block':'none';
+    dotBot.style.display = item.oct==='low'?'block':'none';
+    noteEl.classList.remove('flash');void noteEl.offsetWidth;noteEl.classList.add('flash');
+    playTone(item.freq);
+  }
+
+  nextBtn.addEventListener('click',pick);
+  noteEl.addEventListener('click',pick);
+
+  soundBtn.addEventListener('click',()=>{
+    soundOn=!soundOn;
+    soundBtn.textContent = soundOn?'🔊 发声':'🔇 静音';
+    soundBtn.classList.toggle('on',soundOn);
+    if(soundOn) ensureAudio();
+  });
+
+  function startAuto(){
+    autoBtn.textContent='停止';autoBtn.classList.add('on');
+    run();
+    function run(){
+      pick();
+      autoTimer=setTimeout(run, parseFloat(interval.value)*1000);
+    }
+  }
+  function stopAuto(){
+    clearTimeout(autoTimer);autoTimer=null;
+    autoBtn.textContent='自动播放';autoBtn.classList.remove('on');
+  }
+  autoBtn.addEventListener('click',()=>{ autoTimer?stopAuto():startAuto(); });
+
+  interval.addEventListener('input',()=>{
+    intervalVal.textContent=parseFloat(interval.value).toFixed(1)+'s';
+  });
+
+  document.addEventListener('keydown',e=>{
+    const k=e.key;
+    if(k==='Enter'){ e.preventDefault(); pick(); }
+    else if(k==='ArrowUp'){ e.preventDefault(); interval.value=Math.min(10,parseFloat(interval.value)+0.5).toFixed(1); interval.dispatchEvent(new Event('input')); }
+    else if(k==='ArrowDown'){ e.preventDefault(); interval.value=Math.max(1,parseFloat(interval.value)-0.5).toFixed(1); interval.dispatchEvent(new Event('input')); }
+    else if(k===' '){ e.preventDefault(); autoTimer?stopAuto():startAuto(); }
+    else if(k==='v'||k==='V'){ soundBtn.click(); }
+  });
+
+  pick();
+</script>
+</body>
+</html>
